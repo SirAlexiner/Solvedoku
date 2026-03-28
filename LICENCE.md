@@ -2,7 +2,7 @@
 
 ## Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International Public License
 
-Copyright (c) 2025 Thor Johannessen
+Copyright (c) 2025 Torgrim Thorsen
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to use, copy, and share the Software in any medium or format for any non-commercial purposes, subject to the following conditions:
 

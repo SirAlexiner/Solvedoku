@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Solvedoku</string>
+    <string name="home">Solver</string>
+    <string name="profile">History</string>
+    <string name="settings">Settings</string>
+    <string name="home_fragment">Home</string>
+    <string name="profile_fragment">History</string>
+    <string name="settings_fragment">Settings</string>
+</resources>

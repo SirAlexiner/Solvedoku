@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- res/values/themes.xml  — DEFAULT / LIGHT system mode -->
+<resources>
+
+    <!-- Splash theme shown during cold start on LIGHT system mode -->
+    <style name="Theme.SudokuOCR" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#F5F5F5</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_sudoku_splash_light</item>
+        <item name="windowSplashScreenAnimationDuration">1000</item>
+        <item name="postSplashScreenTheme">@style/Theme.SudokuOCR.Main</item>
+    </style>
+
+    <style name="Theme.SudokuOCR.Main" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
+</resources>

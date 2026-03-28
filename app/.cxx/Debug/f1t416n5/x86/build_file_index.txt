@@ -1,0 +1,1 @@
+C:\Users\Sir_A\AndroidStudioProjects\SudokuOCR\app\src\main\cpp\CMakeLists.txt

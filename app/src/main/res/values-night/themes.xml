@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- res/values-night/themes.xml  — DARK system mode -->
+<!-- Place this file at:  app/src/main/res/values-night/themes.xml -->
+<resources>
+
+    <!-- Splash theme shown during cold start on DARK system mode -->
+    <style name="Theme.SudokuOCR" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#1E1E1E</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_sudoku_splash</item>
+        <item name="windowSplashScreenAnimationDuration">1000</item>
+        <item name="postSplashScreenTheme">@style/Theme.SudokuOCR.Main</item>
+    </style>
+
+    <style name="Theme.SudokuOCR.Main" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
+</resources>

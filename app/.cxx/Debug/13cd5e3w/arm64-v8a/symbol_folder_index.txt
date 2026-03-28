@@ -1,0 +1,1 @@
+C:\Users\Sir_A\AndroidStudioProjects\SudokuOCR\app\build\intermediates\cxx\Debug\13cd5e3w\obj\arm64-v8a

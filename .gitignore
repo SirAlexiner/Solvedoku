@@ -1,0 +1,75 @@
+# ── Android Studio / IntelliJ IDEA ───────────────────────────────────────────
+.idea/
+*.iml
+*.iws
+*.ipr
+.DS_Store
+
+# ── Gradle ────────────────────────────────────────────────────────────────────
+.gradle/
+build/
+**/build/
+gradle-app.setting
+!gradle-wrapper.jar
+!gradle-wrapper.properties
+
+# ── Local configuration ───────────────────────────────────────────────────────
+local.properties
+keystore.properties
+
+# ── Android generated ─────────────────────────────────────────────────────────
+**/R.java
+**/R.class
+**/GenericUnitTests/
+**/*.apk
+**/*.aab
+**/*.ap_
+**/*.dex
+**/*.class
+**/gen/
+**/out/
+**/release/
+proguard/
+
+# ── NDK / CMake ───────────────────────────────────────────────────────────────
+**/obj/
+**/libs/
+.externalNativeBuild/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+*.so
+*.a
+
+# ── Signing / Secrets ─────────────────────────────────────────────────────────
+*.jks
+*.keystore
+google-services.json
+*.pem
+*.p12
+
+# ── Assets — model file must be added manually ────────────────────────────────
+# The TorchScript Lite model is not tracked in this repo.
+# See the README for how to obtain and place it.
+app/src/main/assets/*.ptl
+app/src/main/assets/*.pt
+
+# ── Captures & Profiler output ────────────────────────────────────────────────
+captures/
+.navigation/
+
+# ── Test results ──────────────────────────────────────────────────────────────
+**/test-results/
+**/TEST-*.xml
+
+# ── OS files ──────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Kotlin ───────────────────────────────────────────────────────────────────
+*.kotlin_module
+
+# ── Lint ─────────────────────────────────────────────────────────────────────
+lint/
+*.lint.xml

@@ -1,0 +1,4 @@
+# ninja log v5
+1	2051	7960827811649887	CMakeFiles/sudokuocr.dir/sudoku.cpp.o	220c7d4ce83ccb8
+9	3086	7960827821943154	CMakeFiles/sudokuocr.dir/sudoku_jni.cpp.o	d99d9b17063094de
+3086	3258	7960827823718264	C:/Users/Sir_A/AndroidStudioProjects/SudokuOCR/app/build/intermediates/cxx/Debug/251t1e3u/obj/x86_64/libsudokuocr.so	108e32d607133cd8

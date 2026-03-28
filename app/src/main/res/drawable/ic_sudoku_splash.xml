@@ -1,0 +1,307 @@
+<!-- res/drawable/ic_sudoku_splash.xml  — DARK variant (white/orange/red on dark bg) -->
+<!-- This is the content from the user-supplied animated vector (scanner style).     -->
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt">
+    <aapt:attr name="android:drawable">
+        <vector
+            android:name="vector"
+            android:width="288dp"
+            android:height="288dp"
+            android:viewportWidth="288"
+            android:viewportHeight="288">
+            <path
+                android:name="hor_top"
+                android:pathData="M 89.6 122.66 L 198.4 122.66"
+                android:strokeWidth="5.12"
+                android:strokeAlpha="0"
+                android:strokeColor="#ffffff"
+                android:strokeLineCap="round"
+                android:strokeLineJoin="round" />
+            <path
+                android:name="hor_bot"
+                android:pathData="M 89.6 165.33 L 198.4 165.33"
+                android:strokeWidth="5.12"
+                android:strokeAlpha="0"
+                android:strokeColor="#ffffff"
+                android:strokeLineCap="round"
+                android:strokeLineJoin="round" />
+            <path
+                android:name="vert_top"
+                android:pathData="M 122.66 89.6 L 122.66 198.4"
+                android:strokeWidth="5.12"
+                android:strokeAlpha="0"
+                android:strokeColor="#ffffff"
+                android:strokeLineCap="round"
+                android:strokeLineJoin="round" />
+            <path
+                android:name="vert_bot"
+                android:pathData="M 165.33 89.6 L 165.33 198.4"
+                android:strokeWidth="5.12"
+                android:strokeAlpha="0"
+                android:strokeColor="#ffffff"
+                android:strokeLineCap="round"
+                android:strokeLineJoin="round" />
+            <group
+                android:name="corners_group"
+                android:pivotX="144"
+                android:pivotY="144"
+                android:scaleX="0"
+                android:scaleY="0">
+                <path
+                    android:name="corners"
+                    android:pathData="M 99.2 86 L 86 86 L 86 99.2 M 188.8 86 L 201 86 L 201 99.2 M 99.2 201 L 86 201 L 86 188.8 M 188.8 201 L 201 201 L 201 188.8"
+                    android:strokeWidth="5.12"
+                    android:strokeColor="#ff7b00"
+                    android:strokeLineCap="round"
+                    android:strokeLineJoin="round" />
+            </group>
+            <group
+                android:name="scan_group"
+                android:pivotX="144"
+                android:pivotY="144"
+                android:translateY="-50">
+                <path
+                    android:name="path_9"
+                    android:pathData="M 83.2 144 L 204.8 144"
+                    android:strokeWidth="3.2"
+                    android:strokeAlpha="0"
+                    android:strokeColor="#e71d36"
+                    android:strokeLineCap="round" />
+                <path
+                    android:name="path_10"
+                    android:pathData="M 83.2 140.8 L 204.8 140.8"
+                    android:strokeWidth="3.2"
+                    android:strokeAlpha="0"
+                    android:strokeColor="#e71d36"
+                    android:strokeLineCap="round" />
+                <path
+                    android:name="path_11"
+                    android:pathData="M 83.2 147.2 L 204.8 147.2"
+                    android:strokeWidth="3.2"
+                    android:strokeAlpha="0"
+                    android:strokeColor="#e71d36"
+                    android:strokeLineCap="round" />
+                <path
+                    android:name="path_12"
+                    android:pathData="M 83.2 137.6 L 204.8 137.6"
+                    android:strokeWidth="3.2"
+                    android:strokeAlpha="0"
+                    android:strokeColor="#e71d36"
+                    android:strokeLineCap="round" />
+                <path
+                    android:name="path_13"
+                    android:pathData="M 83.2 150.4 L 204.8 150.4"
+                    android:strokeWidth="3.2"
+                    android:strokeAlpha="0"
+                    android:strokeColor="#e71d36"
+                    android:strokeLineCap="round" />
+            </group>
+        </vector>
+    </aapt:attr>
+    <!-- corners_group: scale+rotate in 250-500ms -->
+    <target android:name="corners_group">
+        <aapt:attr name="android:animation">
+            <set>
+                <objectAnimator
+                    android:duration="250"
+                    android:interpolator="@android:anim/decelerate_interpolator"
+                    android:propertyName="scaleX"
+                    android:startOffset="250"
+                    android:valueFrom="0.1"
+                    android:valueTo="1"
+                    android:valueType="floatType" />
+                <objectAnimator
+                    android:duration="250"
+                    android:interpolator="@android:anim/decelerate_interpolator"
+                    android:propertyName="scaleY"
+                    android:startOffset="250"
+                    android:valueFrom="0"
+                    android:valueTo="1"
+                    android:valueType="floatType" />
+                <objectAnimator
+                    android:duration="250"
+                    android:interpolator="@android:anim/decelerate_interpolator"
+                    android:propertyName="rotation"
+                    android:startOffset="250"
+                    android:valueFrom="0"
+                    android:valueTo="180"
+                    android:valueType="floatType" />
+            </set>
+        </aapt:attr>
+    </target>
+    <target android:name="corners">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:duration="250"
+                android:interpolator="@android:anim/bounce_interpolator"
+                android:propertyName="strokeWidth"
+                android:startOffset="250"
+                android:valueFrom="0"
+                android:valueTo="5.12"
+                android:valueType="floatType" />
+        </aapt:attr>
+    </target>
+    <!-- grid lines draw in 500-800ms -->
+    <target android:name="hor_top">
+        <aapt:attr name="android:animation">
+            <set>
+                <objectAnimator
+                    android:duration="100"
+                    android:propertyName="strokeAlpha"
+                    android:startOffset="500"
+                    android:valueFrom="0"
+                    android:valueTo="1"
+                    android:valueType="floatType" />
+                <objectAnimator
+                    android:duration="300"
+                    android:interpolator="@android:anim/decelerate_interpolator"
+                    android:propertyName="pathData"
+                    android:startOffset="500"
+                    android:valueFrom="M 89.6 122 L 89.6 122.66"
+                    android:valueTo="M 89.6 122.66 L 198.4 122.66"
+                    android:valueType="pathType" />
+            </set>
+        </aapt:attr>
+    </target>
+    <target android:name="hor_bot">
+        <aapt:attr name="android:animation">
+            <set>
+                <objectAnimator
+                    android:duration="100"
+                    android:propertyName="strokeAlpha"
+                    android:startOffset="550"
+                    android:valueFrom="0"
+                    android:valueTo="1"
+                    android:valueType="floatType" />
+                <objectAnimator
+                    android:duration="250"
+                    android:interpolator="@android:anim/decelerate_interpolator"
+                    android:propertyName="pathData"
+                    android:startOffset="550"
+                    android:valueFrom="M 89.6 165.33 L 89.6 165.33"
+                    android:valueTo="M 89.6 165.33 L 198.4 165.33"
+                    android:valueType="pathType" />
+            </set>
+        </aapt:attr>
+    </target>
+    <target android:name="vert_top">
+        <aapt:attr name="android:animation">
+            <set>
+                <objectAnimator
+                    android:duration="100"
+                    android:propertyName="strokeAlpha"
+                    android:startOffset="500"
+                    android:valueFrom="0"
+                    android:valueTo="1"
+                    android:valueType="floatType" />
+                <objectAnimator
+                    android:duration="300"
+                    android:interpolator="@android:anim/decelerate_interpolator"
+                    android:propertyName="pathData"
+                    android:startOffset="500"
+                    android:valueFrom="M 122.66 89.6 L 122.66 89.6"
+                    android:valueTo="M 122.66 89.6 L 122.66 198.4"
+                    android:valueType="pathType" />
+            </set>
+        </aapt:attr>
+    </target>
+    <target android:name="vert_bot">
+        <aapt:attr name="android:animation">
+            <set>
+                <objectAnimator
+                    android:duration="100"
+                    android:propertyName="strokeAlpha"
+                    android:startOffset="550"
+                    android:valueFrom="0"
+                    android:valueTo="1"
+                    android:valueType="floatType" />
+                <objectAnimator
+                    android:duration="250"
+                    android:interpolator="@android:anim/decelerate_interpolator"
+                    android:propertyName="pathData"
+                    android:startOffset="550"
+                    android:valueFrom="M 165.33 89.6 L 165.33 89.6"
+                    android:valueTo="M 165.33 89.6 L 165.33 198.4"
+                    android:valueType="pathType" />
+            </set>
+        </aapt:attr>
+    </target>
+    <!-- scan line sweeps 700-1000ms -->
+    <target android:name="scan_group">
+        <aapt:attr name="android:animation">
+            <set>
+                <objectAnimator
+                    android:duration="150"
+                    android:interpolator="@android:anim/decelerate_interpolator"
+                    android:propertyName="translateY"
+                    android:startOffset="700"
+                    android:valueFrom="-50"
+                    android:valueTo="50"
+                    android:valueType="floatType" />
+                <objectAnimator
+                    android:duration="150"
+                    android:interpolator="@android:anim/bounce_interpolator"
+                    android:propertyName="translateY"
+                    android:startOffset="850"
+                    android:valueFrom="50"
+                    android:valueTo="0"
+                    android:valueType="floatType" />
+            </set>
+        </aapt:attr>
+    </target>
+    <target android:name="path_9">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:duration="100"
+                android:propertyName="strokeAlpha"
+                android:startOffset="650"
+                android:valueFrom="0"
+                android:valueTo="1.0"
+                android:valueType="floatType" />
+        </aapt:attr>
+    </target>
+    <target android:name="path_10">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:duration="100"
+                android:propertyName="strokeAlpha"
+                android:startOffset="651"
+                android:valueFrom="0"
+                android:valueTo="0.5"
+                android:valueType="floatType" />
+        </aapt:attr>
+    </target>
+    <target android:name="path_11">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:duration="100"
+                android:propertyName="strokeAlpha"
+                android:startOffset="651"
+                android:valueFrom="0"
+                android:valueTo="0.5"
+                android:valueType="floatType" />
+        </aapt:attr>
+    </target>
+    <target android:name="path_12">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:duration="100"
+                android:propertyName="strokeAlpha"
+                android:startOffset="651"
+                android:valueFrom="0"
+                android:valueTo="0.3"
+                android:valueType="floatType" />
+        </aapt:attr>
+    </target>
+    <target android:name="path_13">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:duration="100"
+                android:propertyName="strokeAlpha"
+                android:startOffset="651"
+                android:valueFrom="0"
+                android:valueTo="0.3"
+                android:valueType="floatType" />
+        </aapt:attr>
+    </target>
+</animated-vector>

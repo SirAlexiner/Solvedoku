@@ -33,7 +33,7 @@ This project was developed by:
 ### Computer Vision & AI
 - **Computer Vision:** OpenCV 4.9
 - **Digit Recognition:** PyTorch Mobile (TorchScript Lite)
-- **Model:** Custom 4-layer CNN trained on MNIST
+- **Model:** Custom CNN trained on MNIST
 
 ### Solver
 - Backtracking with forward checking

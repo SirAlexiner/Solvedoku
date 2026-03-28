@@ -49,7 +49,7 @@ This project was developed by:
 
 ### Prerequisites
 
-- Android Studio Hedgehog or later
+- Android Studio Meerkat or later
 - Android SDK 26+
 - NDK (for the native C++ solver)
 - CMake 3.22+

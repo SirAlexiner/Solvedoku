@@ -58,7 +58,7 @@ This project was developed by:
 
 1. Clone the repository:
     ```bash
-    git clone https://github.com/yourusername/Solvedoku.git
+    git clone https://github.com/SirAlexiner/Solvedoku.git
     ```
 
 2. Open the project in Android Studio.

@@ -8,7 +8,7 @@ Solvedoku is an Android Sudoku solver that detects and overlays solutions onto p
 
 ## Authors
 This project was developed by:
-- Thor Johannessen [@Thor](https://github.com/)
+- Torgrim Thorsen [@SirAlexiner](https://github.com/SirAlexiner)
 
 ## Features
 

@@ -1,3 +1,4 @@
+![Text: Solvedoku Android Sudoku Solver](solvedoku.jpg)
 # Solvedoku
 
 ## Introduction

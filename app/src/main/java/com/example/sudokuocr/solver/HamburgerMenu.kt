@@ -251,7 +251,7 @@ private fun ContactContent() {
             label   = "Send an email",
             onClick = {
                 val intent = Intent(Intent.ACTION_SENDTO,
-                    "mailto:contact@example.com?subject=Solvedoku Feedback".toUri())
+                    "mailto:torgrilt@stud.ntnu.no?subject=Solvedoku Feedback".toUri())
                 context.startActivity(intent)
             }
         )
@@ -260,7 +260,8 @@ private fun ContactContent() {
             icon    = Icons.Filled.Code,
             label   = "View on GitHub",
             onClick = {
-                val intent = Intent(Intent.ACTION_VIEW, "https://github.com/".toUri())
+                val intent = Intent(Intent.ACTION_VIEW,
+                    "https://github.com/SirAlexiner/Solvedoku".toUri())
                 context.startActivity(intent)
             }
         )
@@ -270,7 +271,7 @@ private fun ContactContent() {
             label   = "Report a bug",
             onClick = {
                 val intent = Intent(Intent.ACTION_VIEW,
-                    "https://github.com/issues/new".toUri())
+                    "https://github.com/SirAlexiner/Solvedoku/issues/new".toUri())
                 context.startActivity(intent)
             }
         )

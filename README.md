@@ -7,6 +7,8 @@
 
 Solvedoku is an Android Sudoku solver that detects and overlays solutions onto puzzles in real time using your camera. Point the camera at any Sudoku puzzle and the solution is projected directly onto the grid. Gallery images are also supported.
 
+![Text: Solvedoku Android Sudoku Solver Demo](solvedoku.gif)
+
 ## Authors
 This project was developed by:
 - Torgrim Thorsen [@SirAlexiner](https://github.com/SirAlexiner)

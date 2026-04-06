@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.PauseCircle
 import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material.icons.filled.Psychology
@@ -40,7 +41,6 @@ import androidx.compose.ui.unit.dp
 
 private data class OnboardingStep(
     val icon:        ImageVector,
-    val iconTint:    androidx.compose.ui.graphics.Color? = null,
     val title:       String,
     val description: String
 )
@@ -49,12 +49,17 @@ private val steps = listOf(
     OnboardingStep(
         icon        = Icons.Filled.CameraAlt,
         title       = "Point & detect",
-        description = "Hold your camera over a sudoku puzzle. If Sudoku is recognized it will start to solve the sudoku."
+        description = "Hold your camera over a Sudoku puzzle. Orange corner brackets will lock onto the grid automatically."
+    ),
+    OnboardingStep(
+        icon        = Icons.Filled.FlashOn,
+        title       = "Use the flashlight for better results",
+        description = "Tap the flashlight button (top-right) to turn on the torch. Consistent lighting reduces shadows across the grid and significantly improves detection accuracy."
     ),
     OnboardingStep(
         icon        = Icons.Filled.Psychology,
         title       = "Auto-solve",
-        description = "Once detected, Solvedoku solves the puzzle using a backtracking algorithm. This takes under a second for most puzzles."
+        description = "Once detected, Solvedoku solves the puzzle using a backtracking algorithm with MRV and MCV heuristics. This takes under a second for most puzzles."
     ),
     OnboardingStep(
         icon        = Icons.Filled.Visibility,
@@ -74,7 +79,7 @@ private val steps = listOf(
     OnboardingStep(
         icon        = Icons.Filled.Photo,
         title       = "Solve from gallery",
-        description = "Tap the gallery button to pick a photo of a sudoku from your library. The same detection and solve pipeline runs on your image."
+        description = "Tap the gallery button to pick a photo of a Sudoku from your library. The same detection and solve pipeline runs on your image."
     ),
     OnboardingStep(
         icon        = Icons.Filled.Settings,
@@ -83,17 +88,13 @@ private val steps = listOf(
     )
 )
 
-/**
- * Full-screen, scrollable onboarding overlay shown on first launch.
- * The user dismisses it with the "Got it!" button at the bottom.
- */
 @Composable
 fun OnboardingOverlay(onDismiss: () -> Unit) {
     Box(
-        modifier          = Modifier
+        modifier         = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f)),
-        contentAlignment  = Alignment.Center
+        contentAlignment = Alignment.Center
     ) {
         Surface(
             modifier        = Modifier
@@ -104,7 +105,6 @@ fun OnboardingOverlay(onDismiss: () -> Unit) {
             shadowElevation = 8.dp
         ) {
             Column(Modifier.fillMaxSize()) {
-                // Header
                 Column(Modifier.padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 8.dp)) {
                     Text(
                         text       = "Welcome to Solvedoku",
@@ -121,7 +121,6 @@ fun OnboardingOverlay(onDismiss: () -> Unit) {
 
                 HorizontalDivider()
 
-                // Scrollable steps
                 LazyColumn(
                     modifier            = Modifier.weight(1f),
                     contentPadding      = PaddingValues(vertical = 8.dp),
@@ -132,7 +131,6 @@ fun OnboardingOverlay(onDismiss: () -> Unit) {
 
                 HorizontalDivider()
 
-                // Dismiss button
                 Button(
                     onClick  = onDismiss,
                     modifier = Modifier
@@ -149,20 +147,16 @@ fun OnboardingOverlay(onDismiss: () -> Unit) {
 @Composable
 private fun OnboardingStepCard(step: OnboardingStep) {
     Row(
-        modifier            = Modifier
+        modifier              = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment     = Alignment.Top
     ) {
-        // Icon in a tinted circle
         Box(
             modifier         = Modifier
                 .size(44.dp)
-                .background(
-                    MaterialTheme.colorScheme.primaryContainer,
-                    shape = CircleShape
-                ),
+                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -172,7 +166,6 @@ private fun OnboardingStepCard(step: OnboardingStep) {
                 modifier           = Modifier.size(22.dp)
             )
         }
-
         Column(Modifier.weight(1f)) {
             Text(
                 text       = step.title,

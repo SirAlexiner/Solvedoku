@@ -28,4 +28,5 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun setSaveToGallery(v: Boolean)       { viewModelScope.launch { repo.updateSaveToGallery(v)       } }
     fun setSaveStyle(s: SaveStyle)         { viewModelScope.launch { repo.updateSaveStyle(s)           } }
     fun setAppTheme(t: AppTheme)           { viewModelScope.launch { repo.updateAppTheme(t)            } }
+    fun setDevMode(enabled: Boolean)       { viewModelScope.launch { repo.updateDevMode(enabled)        } }
 }

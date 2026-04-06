@@ -164,6 +164,23 @@ class SolverViewModel(
     // Read directly by analyzeFrame — avoids Compose state capture in AndroidView factory.
     @Volatile var isFrozen: Boolean = false
 
+    // Torch (flashlight) toggle
+    private val _torchOn = MutableStateFlow(false)
+    val torchOn = _torchOn.asStateFlow()
+    private var cameraControl: androidx.camera.core.CameraControl? = null
+
+    fun onCameraReady(control: androidx.camera.core.CameraControl) {
+        cameraControl = control
+        // Re-apply torch state in case camera was rebound
+        control.enableTorch(_torchOn.value)
+    }
+
+    fun toggleTorch() {
+        val next = !_torchOn.value
+        _torchOn.value = next
+        cameraControl?.enableTorch(next)
+    }
+
     init {
         // Regenerate solutionMat whenever settings change while puzzle is solved.
         viewModelScope.launch {
@@ -348,7 +365,7 @@ class SolverViewModel(
                     val bgr = Mat()
                     Imgproc.cvtColor(rgba, bgr, Imgproc.COLOR_RGBA2BGR)
                     rgba.release()
-                    SudokuDetector.detect(bgr).also { bgr.release() }
+                    SudokuDetector.detect(bgr, settings.value.cvParams).also { bgr.release() }
                 }
 
                 if (result == null) {
@@ -446,6 +463,8 @@ class SolverViewModel(
         _boardVisible.value   = false
         _cameraFrozen.value   = false
         isFrozen              = false
+        _torchOn.value        = false
+        cameraControl?.enableTorch(false)
         _frozenFrame.value    = null
         _state.value          = SolverState.Scanning
     }

@@ -6,43 +6,21 @@ import android.graphics.Bitmap
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.ImageAnalysis
-import androidx.camera.core.ImageProxy
-import androidx.camera.core.Preview
+import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.FlashOff
+import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -58,7 +36,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
-import androidx.core.graphics.createBitmap
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.sudokuocr.cv.SudokuDetector
@@ -67,6 +44,7 @@ import org.opencv.core.CvType
 import org.opencv.core.Mat
 import org.opencv.imgproc.Imgproc
 import java.util.concurrent.Executors
+import androidx.core.graphics.createBitmap
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
@@ -128,6 +106,7 @@ private fun BoxScope.SolverReadyContent(
     onGalleryPick: () -> Unit
 ) {
     val cameraFrozen   by vm.cameraFrozen.collectAsState()
+    val torchOn        by vm.torchOn.collectAsState()
     val frozenFrame    by vm.frozenFrame.collectAsState()
     val galleryBitmap  by vm.galleryBitmap.collectAsState()
     val boardVisible   by vm.boardVisible.collectAsState()
@@ -150,12 +129,12 @@ private fun BoxScope.SolverReadyContent(
     LaunchedEffect(galleryBitmap) { vm.applyGalleryFrame(galleryBitmap) }
 
     CameraContent(
-        vm             = vm,
-        state          = state,
-        overlay        = OverlayState(arBitmap, overlayVisible, frozenFrame, boardVisible),
-        onHoldStart    = { if (state is SolverState.Solved) overlayHeld = true },
-        onHoldEnd      = { overlayHeld = false },
-        onDoubleTap    = { vm.toggleFreeze(state) }
+        vm           = vm,
+        state        = state,
+        overlay      = OverlayState(arBitmap, overlayVisible, frozenFrame, boardVisible),
+        onHoldStart  = { if (state is SolverState.Solved) overlayHeld = true },
+        onHoldEnd    = { overlayHeld = false },
+        onDoubleTap  = { vm.toggleFreeze(state) }
     )
     SolverOverlays(state = state, modifier = Modifier.fillMaxSize())
     SolverActionButtons(
@@ -168,6 +147,14 @@ private fun BoxScope.SolverReadyContent(
         state          = state,
         cameraFrozen   = cameraFrozen,
         showSavedBadge = showSavedBadge
+    )
+    TorchButton(
+        torchOn  = torchOn,
+        onClick  = { vm.toggleTorch() },
+        modifier = Modifier
+            .align(Alignment.TopEnd)
+            .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top))
+            .padding(end = 12.dp, top = 12.dp)
     )
 }
 
@@ -194,7 +181,7 @@ private fun BoxScope.SolverBadges(
     // Gallery-saved badge — center screen, auto-dismisses after 2 s
     if (showSavedBadge) {
         GestureBadge(
-            text     = "Solution saved to gallery",
+            text     = "✓  Saved to gallery",
             modifier = Modifier.align(Alignment.Center)
         )
     }
@@ -316,7 +303,8 @@ private fun bindCamera(
         .build().also { it.setAnalyzer(executor) { proxy -> analyzeFrame(proxy, vm) } }
     try {
         provider.unbindAll()
-        provider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
+        val camera = provider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
+        vm.onCameraReady(camera.cameraControl)
     } catch (e: Exception) { e.printStackTrace() }
 }
 
@@ -401,6 +389,32 @@ private fun GestureBadge(text: String, modifier: Modifier) {
             color    = Color.White,
             fontSize = 12.sp,
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+        )
+    }
+}
+
+
+// ── Torch button ──────────────────────────────────────────────────────────────
+
+@Composable
+private fun TorchButton(torchOn: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val icon = if (torchOn) Icons.Filled.FlashOff else Icons.Filled.FlashOn
+    Surface(
+        onClick   = onClick,
+        modifier  = modifier,
+        shape     = RoundedCornerShape(12.dp),
+        color     = if (torchOn)
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
+        else
+            Color.Black.copy(alpha = 0.55f),
+        tonalElevation  = 4.dp,
+        shadowElevation = 4.dp
+    ) {
+        Icon(
+            imageVector        = icon,
+            contentDescription = if (torchOn) "Turn off flashlight" else "Turn on flashlight",
+            tint               = Color.White,
+            modifier           = Modifier.padding(10.dp).size(24.dp)
         )
     }
 }
@@ -497,7 +511,7 @@ private fun analyzeFrame(imageProxy: ImageProxy, vm: SolverViewModel) {
 
         maybeCaptureFrameBitmap(rotated, vm, currentState)
 
-        val detected = SudokuDetector.detect(rotated)
+        val detected = SudokuDetector.detect(rotated, vm.settings.value.cvParams)
         if (detected != null) {
             when (vm.state.value) {
                 is SolverState.Solved   -> vm.updateArOverlay(detected)

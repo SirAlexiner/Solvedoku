@@ -17,7 +17,9 @@ data class AppSettings(
     val givenColorArgb: Int        = Color(0xFF4CAF50).toArgb(),  // used when CUSTOM
     val saveToGallery: Boolean     = false,
     val saveStyle: SaveStyle       = SaveStyle.AR_COMPOSITE,
-    val appTheme: AppTheme           = AppTheme.SYSTEM
+    val appTheme: AppTheme           = AppTheme.SYSTEM,
+    val devModeEnabled: Boolean      = false,
+    val cvParams: CvParams           = CvParams()
 )
 
 enum class GivenDisplay(val label: String) {

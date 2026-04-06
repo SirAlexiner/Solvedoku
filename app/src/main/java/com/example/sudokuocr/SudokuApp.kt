@@ -2,6 +2,7 @@ package com.example.sudokuocr
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Settings
@@ -10,13 +11,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavHostController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.sudokuocr.dev.DevScreen
 import com.example.sudokuocr.history.HistoryScreen
 import com.example.sudokuocr.settings.SettingsScreen
 import com.example.sudokuocr.solver.HamburgerButton
@@ -27,7 +29,8 @@ import com.example.sudokuocr.ui.theme.SudokuOCRTheme
 sealed class Screen(val route: String, val label: String) {
     object Solver   : Screen("solver",   "Solver")
     object History  : Screen("history",  "History")
-    object Settings : Screen("settings", "Settings")
+    object Settings  : Screen("settings",   "Settings")
+    object Developer : Screen("developer",  "Developer")
 }
 
 @Composable
@@ -40,12 +43,13 @@ fun SudokuApp(mainVm: MainViewModel) {
         var showOnboardingOverride by remember { mutableStateOf(false) }
 
         // Hoisted so SudokuApp can observe the current route
+        val devModeEnabled    = settings.devModeEnabled
         val navController     = rememberNavController()
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute      = navBackStackEntry?.destination?.route
 
         Box(Modifier.fillMaxSize()) {
-            MainNavigation(navController)
+            MainNavigation(navController, devModeEnabled)
 
             if (currentRoute == Screen.Solver.route) {
                 HamburgerButton(
@@ -58,8 +62,8 @@ fun SudokuApp(mainVm: MainViewModel) {
             }
 
             HamburgerMenu(
-                open = drawerOpen,
-                onDismiss = { drawerOpen = false },
+                open             = drawerOpen,
+                onDismiss        = { drawerOpen = false },
                 onShowOnboarding = { drawerOpen = false; showOnboardingOverride = true }
             )
 
@@ -74,10 +78,13 @@ fun SudokuApp(mainVm: MainViewModel) {
 }
 
 @Composable
-private fun MainNavigation(navController: NavHostController) {
+private fun MainNavigation(navController: NavHostController, devModeEnabled: Boolean) {
     val navBackStackEntry  by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
-    val items              = listOf(Screen.Solver, Screen.History, Screen.Settings)
+    val items = buildList {
+        add(Screen.Solver); add(Screen.History); add(Screen.Settings)
+        if (devModeEnabled) add(Screen.Developer)
+    }
 
     Scaffold(
         bottomBar = {
@@ -88,7 +95,8 @@ private fun MainNavigation(navController: NavHostController) {
                             when (screen) {
                                 Screen.Solver   -> Icon(Icons.Filled.CameraAlt, screen.label)
                                 Screen.History  -> Icon(Icons.Filled.History,   screen.label)
-                                Screen.Settings -> Icon(Icons.Filled.Settings,  screen.label)
+                                Screen.Settings  -> Icon(Icons.Filled.Settings, screen.label)
+                                Screen.Developer -> Icon(Icons.Filled.BugReport, screen.label)
                             }
                         },
                         label    = { Text(screen.label) },
@@ -112,7 +120,8 @@ private fun MainNavigation(navController: NavHostController) {
         ) {
             composable(Screen.Solver.route)   { SolverScreen() }
             composable(Screen.History.route)  { HistoryScreen() }
-            composable(Screen.Settings.route) { SettingsScreen() }
+            composable(Screen.Settings.route)   { SettingsScreen() }
+            composable(Screen.Developer.route) { DevScreen() }
         }
     }
 }

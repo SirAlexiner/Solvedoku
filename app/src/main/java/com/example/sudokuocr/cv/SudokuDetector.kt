@@ -1,121 +1,218 @@
 package com.example.sudokuocr.cv
 
 import android.graphics.Bitmap
-import com.example.sudokuocr.cv.SudokuDetector.MIN_HOUGH_LINES
 import org.opencv.android.Utils
-import org.opencv.core.Core
-import org.opencv.core.CvType
-import org.opencv.core.Mat
-import org.opencv.core.MatOfInt
-import org.opencv.core.MatOfPoint
-import org.opencv.core.MatOfPoint2f
-import org.opencv.core.Point
-import org.opencv.core.Scalar
-import org.opencv.core.Size
+import org.opencv.core.*
 import org.opencv.imgproc.Imgproc
+import com.example.sudokuocr.data.settings.CvParams
 import kotlin.math.abs
 import androidx.core.graphics.createBitmap
 
 data class DetectionResult(
-    val cells: List<Mat>,           // 81 cell Mats, row-major, top-left → bottom-right
-    val warpedBitmap: Bitmap,       // deskewed 450×450 board (for history thumbnail)
-    val corners: MatOfPoint2f,      // 4 corners in camera-frame space, order: TL, TR, BR, BL
+    val cells: List<Mat>,
+    val warpedBitmap: Bitmap,
+    val corners: MatOfPoint2f,
     val cameraFrameWidth: Int,
     val cameraFrameHeight: Int
 )
 
+/** Each stage the debug view can show. */
+enum class CvStage(val label: String) {
+    RAW("Raw"),
+    GRAYSCALE("Grayscale"),
+    EDGES("Canny Edges"),
+    CONTOURS("Contours"),
+    QUAD("Quad / Corners"),
+    WARPED("Warped Board")
+}
+
+data class DebugResult(
+    val stageBitmap: Bitmap,          // visual for the requested stage
+    val detection: DetectionResult? // null if no board found
+)
+
 object SudokuDetector {
 
-    private const val WARP_SIZE   = 450.0
-    private const val MIN_AREA_RATIO = 0.05   // board must be ≥ 5% of frame
-    private const val MIN_HOUGH_LINES = 8     // relaxed from C++'s 16 — handles partial views
+    private const val WARP_SIZE = 450.0
+    private val DEFAULT_PARAMS = CvParams()
 
-    fun detect(frame: Mat): DetectionResult? {
+    // ── Public API ────────────────────────────────────────────────────────────
+
+    /** Production path — uses persistent params, no debug overhead. */
+    fun detect(frame: Mat, params: CvParams = DEFAULT_PARAMS): DetectionResult? {
         if (frame.empty()) return null
+        val (gray, edges) = preprocess(frame, params)
+        val result = findAndWarp(frame, gray, edges, params)
+        gray.release(); edges.release()
+        return result
+    }
 
-        // ── 1. Preprocess: grayscale → small blur → Canny (mirrors C++) ──────
+    /**
+     * Debug path — returns a [DebugResult] with a [Bitmap] of the requested [stage]
+     * plus the [DetectionResult] if a board was found. Caller is responsible for nothing;
+     * all intermediate Mats are released internally.
+     */
+    fun detectDebug(frame: Mat, params: CvParams, stage: CvStage): DebugResult {
+        if (frame.empty()) return DebugResult(frame.toBitmap(), null)
         val gray = Mat()
         Imgproc.cvtColor(frame, gray, Imgproc.COLOR_BGR2GRAY)
-
         val blurred = Mat()
         Imgproc.GaussianBlur(gray, blurred, Size(3.0, 3.0), 0.0)
-
         val edges = Mat()
-        Imgproc.Canny(blurred, edges, 50.0, 100.0)
+        Imgproc.Canny(blurred, edges, params.cannyLow, params.cannyHigh)
         blurred.release()
 
-        // ── 2. Find all contours (RETR_LIST catches inner boards too) ─────────
-        val contours  = mutableListOf<MatOfPoint>()
+        // Find quads for contour/quad stages
+        val contours = mutableListOf<MatOfPoint>()
         val hierarchy = Mat()
         Imgproc.findContours(
-            edges, contours, hierarchy,
+            edges,
+            contours,
+            hierarchy,
             Imgproc.RETR_LIST,
             Imgproc.CHAIN_APPROX_TC89_KCOS
         )
         hierarchy.release()
 
         val frameArea = frame.rows().toDouble() * frame.cols().toDouble()
-        val minArea   = frameArea * MIN_AREA_RATIO
-
-        // ── 3. Collect all convex quadrilaterals above minimum area ───────────
-        val quads = contours.mapNotNull { approxConvexQuad(it, minArea) }
-
-        if (quads.isEmpty()) {
-            gray.release(); edges.release()
-            return null
-        }
-
-        // ── 4. Two-candidate strategy (mirrors C++) ───────────────────────────
-        //    Sort by area descending so quads[0] is the largest
+        val minArea = frameArea * params.minAreaRatio
+        val quads = contours.mapNotNull { approxConvexQuad(it, minArea, params) }
         val sorted = quads.sortedByDescending { Imgproc.contourArea(it) }
-        val largest = sorted[0]
 
-        // Largest inner quad: a quad that fits entirely inside the largest one
-        val bestInner = sorted.drop(1).filter { inner ->
-            isInsideQuad(largest, inner)
-        }.maxByOrNull { Imgproc.contourArea(it) }
+        // Find best candidate
+        val largest = sorted.firstOrNull()
+        val bestInner =
+            sorted.drop(1).filter { inner -> largest != null && isInsideQuad(largest, inner) }
+                .maxByOrNull { Imgproc.contourArea(it) }
+        val candidate = bestInner?.takeIf { isLikelySudoku(it, edges, params) }
+            ?: largest?.takeIf { isLikelySudoku(it, edges, params) }
 
-        val candidate = bestInner
-            ?.takeIf { isLikelySudoku(it, edges) }
-            ?: largest.takeIf { isLikelySudoku(it, edges) }
+        return when (stage) {
+            CvStage.RAW -> DebugResult(frame.toBitmap(), null).also { gray.release() }
+            CvStage.GRAYSCALE -> DebugResult(
+                gray.grayToBitmap(),
+                null
+            ).also { gray.release() }
 
-        edges.release()
-        if (candidate == null) return null
+            CvStage.EDGES -> DebugResult(
+                edges.grayToBitmap(),
+                null
+            ).also { gray.release(); edges.release() }
 
-        // ── 5. Order corners TL, TR, BR, BL ──────────────────────────────────
+            CvStage.CONTOURS -> {
+                val vis = frame.clone()
+                // Draw all contours grey, valid quads white
+                Imgproc.drawContours(vis, contours, -1, Scalar(80.0, 80.0, 80.0), 1)
+                val quadMops = quads.map { mof ->
+                    MatOfPoint(*mof.toArray().map { Point(it.x, it.y) }.toTypedArray())
+                }
+                Imgproc.drawContours(vis, quadMops, -1, Scalar(255.0, 255.0, 255.0), 2)
+                val bmp = vis.toBitmap()
+                vis.release(); gray.release(); edges.release()
+                DebugResult(bmp, null)
+            }
+
+            CvStage.QUAD -> {
+                val vis = frame.clone()
+                if (candidate != null) {
+                    val ordered = sortCorners(candidate)
+                    if (ordered != null) {
+                        val pts = ordered.toArray()
+                        // Draw the quad outline in green
+                        for (i in pts.indices) {
+                            Imgproc.line(vis, pts[i], pts[(i + 1) % 4], Scalar(0.0, 255.0, 0.0), 3)
+                        }
+                        // Draw corners as orange circles
+                        pts.forEach { pt ->
+                            Imgproc.circle(vis, pt, 10, Scalar(0.0, 140.0, 255.0), -1)
+                        }
+                    }
+                }
+                val bmp = vis.toBitmap()
+                vis.release(); gray.release(); edges.release()
+                DebugResult(bmp, null)
+            }
+
+            CvStage.WARPED -> {
+                // WARPED stage — also produce the full detection result
+                val detection =
+                    if (candidate != null) warpCandidate(frame, gray, candidate) else null
+
+                val stageBmp = detection?.warpedBitmap  // already a bitmap
+                    ?: frame.toBitmap()        // fallback: raw frame
+
+                gray.release(); edges.release()
+                DebugResult(stageBmp, detection)
+            }
+        }
+    }
+
+    // ── Shared pipeline ───────────────────────────────────────────────────────
+
+    private fun preprocess(frame: Mat, params: CvParams): Pair<Mat, Mat> {
+        val gray = Mat()
+        Imgproc.cvtColor(frame, gray, Imgproc.COLOR_BGR2GRAY)
+        val blurred = Mat()
+        Imgproc.GaussianBlur(gray, blurred, Size(3.0, 3.0), 0.0)
+        val edges = Mat()
+        Imgproc.Canny(blurred, edges, params.cannyLow, params.cannyHigh)
+        blurred.release()
+        return Pair(gray, edges)
+    }
+
+    private fun findAndWarp(frame: Mat, gray: Mat, edges: Mat, params: CvParams): DetectionResult? {
+        val contours = mutableListOf<MatOfPoint>()
+        val hierarchy = Mat()
+        Imgproc.findContours(
+            edges,
+            contours,
+            hierarchy,
+            Imgproc.RETR_LIST,
+            Imgproc.CHAIN_APPROX_TC89_KCOS
+        )
+        hierarchy.release()
+
+        val frameArea = frame.rows().toDouble() * frame.cols().toDouble()
+        val quads =
+            contours.mapNotNull { approxConvexQuad(it, frameArea * params.minAreaRatio, params) }
+        val sorted = quads.sortedByDescending { Imgproc.contourArea(it) }
+        val largest = sorted.firstOrNull() ?: return null
+
+        val bestInner = sorted.drop(1)
+            .filter { isInsideQuad(largest, it) }
+            .maxByOrNull { Imgproc.contourArea(it) }
+
+        val candidate = bestInner?.takeIf { isLikelySudoku(it, edges, params) }
+            ?: largest.takeIf { isLikelySudoku(it, edges, params) }
+            ?: return null
+
+        return warpCandidate(frame, gray, candidate)
+    }
+
+    private fun warpCandidate(frame: Mat, gray: Mat, candidate: MatOfPoint2f): DetectionResult? {
         val ordered = sortCorners(candidate) ?: return null
 
-        // ── 6. Perspective warp to 450×450 ───────────────────────────────────
         val dst = MatOfPoint2f(
-            Point(0.0,          0.0),
-            Point(WARP_SIZE-1,  0.0),
-            Point(WARP_SIZE-1,  WARP_SIZE-1),
-            Point(0.0,          WARP_SIZE-1)
+            Point(0.0, 0.0), Point(WARP_SIZE - 1, 0.0),
+            Point(WARP_SIZE - 1, WARP_SIZE - 1), Point(0.0, WARP_SIZE - 1)
         )
         val transform = Imgproc.getPerspectiveTransform(ordered, dst)
-
         val warpedGray = Mat()
         Imgproc.warpPerspective(gray, warpedGray, transform, Size(WARP_SIZE, WARP_SIZE))
-        gray.release()
-
         val warpedColor = Mat()
         Imgproc.warpPerspective(frame, warpedColor, transform, Size(WARP_SIZE, WARP_SIZE))
         transform.release()
 
-        // ── 7. Extract 81 cells (4px inset removes grid lines) ───────────────
         val cellSize = (WARP_SIZE / 9.0).toInt()
-        val inset    = 4
-        val cells    = (0 until 9).flatMap { row ->
+        val inset = 4
+        val cells = (0 until 9).flatMap { row ->
             (0 until 9).map { col ->
                 val x = col * cellSize + inset
                 val y = row * cellSize + inset
-                val w = cellSize - inset * 2
-                val h = cellSize - inset * 2
-                warpedGray.submat(y, y + h, x, x + w).clone()
+                warpedGray.submat(y, y + cellSize - inset * 2, x, x + cellSize - inset * 2).clone()
             }
         }
 
-        // ── 8. Build thumbnail bitmap ─────────────────────────────────────────
         val bmp = createBitmap(warpedColor.cols(), warpedColor.rows())
         Utils.matToBitmap(warpedColor, bmp)
         warpedGray.release(); warpedColor.release()
@@ -123,118 +220,112 @@ object SudokuDetector {
         return DetectionResult(cells, bmp, ordered, frame.cols(), frame.rows())
     }
 
-    // ── Helpers ────────────────────────────────────────────────────────────────
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
-    /**
-     * Approximates [contour] as a convex quadrilateral.
-     * Returns the 4-point MatOfPoint2f, or null if not a convex quad or too small.
-     */
-    private fun approxConvexQuad(contour: MatOfPoint, minArea: Double): MatOfPoint2f? {
+    private fun approxConvexQuad(
+        contour: MatOfPoint,
+        minArea: Double,
+        params: CvParams
+    ): MatOfPoint2f? {
         if (Imgproc.contourArea(contour) < minArea) return null
-        val c2f  = MatOfPoint2f(*contour.toArray())
-        val peri = Imgproc.arcLength(c2f, true)
+        val c2f = MatOfPoint2f(*contour.toArray())
         val approx = MatOfPoint2f()
-        Imgproc.approxPolyDP(c2f, approx, 0.02 * peri, true)
+        Imgproc.approxPolyDP(
+            c2f,
+            approx,
+            params.polyEpsilonFactor * Imgproc.arcLength(c2f, true),
+            true
+        )
         if (approx.rows() != 4) return null
-        // Convexity check — mirrors C++ isContourConvex
         val hull = MatOfInt()
-        val mp   = MatOfPoint(*approx.toArray())
-        Imgproc.convexHull(mp, hull)
+        Imgproc.convexHull(MatOfPoint(*approx.toArray()), hull)
         if (hull.rows() != 4) return null
         return approx
     }
 
-    /**
-     * Returns true if every corner of [inner] lies within [outer].
-     */
     private fun isInsideQuad(outer: MatOfPoint2f, inner: MatOfPoint2f): Boolean =
-        inner.toArray().all { pt ->
-            Imgproc.pointPolygonTest(outer, pt, false) >= 0.0
-        }
+        inner.toArray().all { Imgproc.pointPolygonTest(outer, it, false) >= 0.0 }
 
-    /**
-     * Validates a quadrilateral candidate by checking for Hough grid lines inside it.
-     * Applies a mask, runs HoughLines, separates/merges horizontal+vertical lines,
-     * and requires at least [MIN_HOUGH_LINES] total merged lines.
-     *
-     * This is less strict than the C++ >16 threshold to handle partial views.
-     */
-    private fun isLikelySudoku(quad: MatOfPoint2f, edges: Mat): Boolean {
+    private fun isLikelySudoku(quad: MatOfPoint2f, edges: Mat, params: CvParams): Boolean {
         val sorted = sortCorners(quad) ?: return false
-
-        // Mask the edge image to only look inside the candidate quad
         val mask = Mat.zeros(edges.size(), CvType.CV_8U)
-        val quadPoly = MatOfPoint(*sorted.toArray().map { it }.toTypedArray())
-        Imgproc.fillConvexPoly(mask, quadPoly, Scalar(255.0))
-        val maskedEdges = Mat()
-        Core.bitwise_and(edges, edges, maskedEdges, mask)
-        mask.release(); quadPoly.release()
+        Imgproc.fillConvexPoly(mask, MatOfPoint(*sorted.toArray()), Scalar(255.0))
+        val masked = Mat()
+        Core.bitwise_and(edges, edges, masked, mask)
+        mask.release()
 
-        // Hough line detection
         val lines = Mat()
-        Imgproc.HoughLines(maskedEdges, lines, 1.0, Math.PI / 180.0, 80)
-        maskedEdges.release()
-
+        Imgproc.HoughLines(masked, lines, 1.0, Math.PI / 180.0, params.houghThreshold)
+        masked.release()
         if (lines.empty()) return false
 
-        val angleTol = 0.261799f   // ±15°
-        val horizRhos = mutableListOf<Float>()
-        val vertRhos  = mutableListOf<Float>()
-
+        val angleTol = 0.261799f
+        val hRhos = mutableListOf<Float>()
+        val vRhos = mutableListOf<Float>()
         for (i in 0 until lines.rows()) {
-            var rho   = lines.get(i, 0)[0].toFloat()
-            var theta = lines.get(i, 0)[1].toFloat()
-            if (theta < 0) { theta += Math.PI.toFloat(); rho = -rho }
-
+            var rho = lines[i, 0][0].toFloat()
+            var theta = lines[i, 0][1].toFloat()
+            if (theta < 0) {
+                theta += Math.PI.toFloat(); rho = -rho
+            }
             when {
-                abs(theta - 0f)                         < angleTol -> horizRhos.add(rho)
-                abs(theta - Math.PI.toFloat())           < angleTol -> horizRhos.add(rho)
-                abs(theta - (Math.PI / 2).toFloat())     < angleTol -> vertRhos.add(rho)
+                abs(theta) < angleTol || abs(theta - Math.PI.toFloat()) < angleTol -> hRhos.add(rho)
+                abs(theta - (Math.PI / 2).toFloat()) < angleTol -> vRhos.add(rho)
             }
         }
         lines.release()
-
-        val totalMerged = mergeRhos(horizRhos).size + mergeRhos(vertRhos).size
-        return totalMerged >= MIN_HOUGH_LINES
+        return mergeRhos(hRhos).size + mergeRhos(vRhos).size >= params.minHoughLines
     }
 
-    /** Merges rho values that are within 10px of each other — mirrors C++ mergeLines. */
     private fun mergeRhos(rhos: List<Float>): List<Float> {
         if (rhos.isEmpty()) return emptyList()
-        val sorted  = rhos.sorted()
-        val merged  = mutableListOf(sorted[0])
-        for (r in sorted.drop(1)) {
-            if (abs(r - merged.last()) > 10f) merged.add(r) else merged[merged.lastIndex] = (merged.last() + r) / 2f
+        val s = rhos.sorted()
+        val m = mutableListOf(s[0])
+        for (r in s.drop(1)) {
+            if (abs(r - m.last()) > 10f) m.add(r) else m[m.lastIndex] = (m.last() + r) / 2f
         }
-        return merged
+        return m
     }
 
-    /**
-     * Orders four corner points: top-left, top-right, bottom-right, bottom-left.
-     * Uses sum (x+y) and difference (x−y) — same as the C++ sortCornerPoints approach.
-     */
     private fun sortCorners(pts: MatOfPoint2f): MatOfPoint2f? {
-        val points = pts.toArray()
-        if (points.size != 4) return null
-
-        val center = Point(
-            points.sumOf { it.x } / 4.0,
-            points.sumOf { it.y } / 4.0
-        )
-
-        var tl: Point? = null; var tr: Point? = null
-        var bl: Point? = null; var br: Point? = null
-
-        for (pt in points) {
-            when {
-                pt.x < center.x && pt.y < center.y -> tl = pt
-                pt.x > center.x && pt.y < center.y -> tr = pt
-                pt.x < center.x && pt.y > center.y -> bl = pt
-                else                                -> br = pt
-            }
+        val points = pts.toArray(); if (points.size != 4) return null
+        val cx = points.sumOf { it.x } / 4.0
+        val cy = points.sumOf { it.y } / 4.0
+        var tl: Point? = null
+        var tr: Point? = null
+        var bl: Point? = null
+        var br: Point? = null
+        for (pt in points) when {
+            pt.x < cx && pt.y < cy -> tl = pt
+            pt.x > cx && pt.y < cy -> tr = pt
+            pt.x < cx && pt.y > cy -> bl = pt
+            else -> br = pt
         }
-
         if (tl == null || tr == null || br == null || bl == null) return null
         return MatOfPoint2f(tl, tr, br, bl)
+    }
+
+    // ── Bitmap helpers ────────────────────────────────────────────────────────
+
+    private fun Mat.toBitmap(): Bitmap {
+        val rgba = Mat()
+        when (channels()) {
+            1 -> Imgproc.cvtColor(this, rgba, Imgproc.COLOR_GRAY2RGBA)
+            3 -> Imgproc.cvtColor(this, rgba, Imgproc.COLOR_BGR2RGBA)
+            else -> Imgproc.cvtColor(this, rgba, Imgproc.COLOR_BGRA2RGBA)
+        }
+        val bmp = createBitmap(cols(), rows())
+        Utils.matToBitmap(rgba, bmp)
+        rgba.release()
+        return bmp
+    }
+
+    private fun Mat.grayToBitmap(): Bitmap {
+        val rgba = Mat()
+        Imgproc.cvtColor(this, rgba, Imgproc.COLOR_GRAY2RGBA)
+        val bmp = createBitmap(cols(), rows())
+        Utils.matToBitmap(rgba, bmp)
+        rgba.release()
+        return bmp
     }
 }

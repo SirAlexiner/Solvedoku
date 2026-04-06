@@ -169,10 +169,20 @@ class SolverViewModel(
     val torchOn = _torchOn.asStateFlow()
     private var cameraControl: androidx.camera.core.CameraControl? = null
 
-    fun onCameraReady(control: androidx.camera.core.CameraControl) {
-        cameraControl = control
-        // Re-apply torch state in case camera was rebound
-        control.enableTorch(_torchOn.value)
+    fun onCameraReady(camera: androidx.camera.core.Camera) {
+        cameraControl = camera.cameraControl
+        // Apply current torch state immediately (handles rebind)
+        camera.cameraControl.enableTorch(_torchOn.value)
+
+        // Observe CameraInfo.torchState — CameraX or AE can silently reset the
+        // torch to OFF. If our intent is ON, re-enable it automatically.
+        camera.cameraInfo.torchState.observeForever { state ->
+            val torchState = state ?: return@observeForever
+            val isOff = torchState == androidx.camera.core.TorchState.OFF
+            if (isOff && _torchOn.value) {
+                camera.cameraControl.enableTorch(true)
+            }
+        }
     }
 
     fun toggleTorch() {
@@ -258,6 +268,10 @@ class SolverViewModel(
             }
 
             _state.value = SolverState.Solved(given, solved, elapsed, isGallery = isGallery)
+
+            // CameraX can silently reset the torch when the analysis pipeline
+            // processes its first frame. Re-assert the user's chosen state after solve.
+            if (_torchOn.value) cameraControl?.enableTorch(true)
         }
     }
 
@@ -463,8 +477,6 @@ class SolverViewModel(
         _boardVisible.value   = false
         _cameraFrozen.value   = false
         isFrozen              = false
-        _torchOn.value        = false
-        cameraControl?.enableTorch(false)
         _frozenFrame.value    = null
         _state.value          = SolverState.Scanning
     }

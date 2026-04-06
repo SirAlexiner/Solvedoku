@@ -304,7 +304,7 @@ private fun bindCamera(
     try {
         provider.unbindAll()
         val camera = provider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
-        vm.onCameraReady(camera.cameraControl)
+        vm.onCameraReady(camera)
     } catch (e: Exception) { e.printStackTrace() }
 }
 
